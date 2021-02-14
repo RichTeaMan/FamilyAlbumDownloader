@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FamilyAlbumDownload", "FamilyAlbumDownload.csproj", "{DA5C347B-24E3-454E-88DA-AF4BBC146980}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA5C347B-24E3-454E-88DA-AF4BBC146980}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA5C347B-24E3-454E-88DA-AF4BBC146980}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA5C347B-24E3-454E-88DA-AF4BBC146980}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA5C347B-24E3-454E-88DA-AF4BBC146980}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4ECF2E0-63F0-4E48-880A-9EB9E10E6612}
+	EndGlobalSection
+EndGlobal
