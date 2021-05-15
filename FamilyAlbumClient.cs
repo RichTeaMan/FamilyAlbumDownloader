@@ -59,7 +59,7 @@ namespace FamilyAlbumDownload
                 }
                 authToken = matches.Value;
 
-                var formContent = new FormUrlEncodedContent(new[]
+                using var formContent = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("authenticity_token", authToken),
                     new KeyValuePair<string, string>("session[password]", password),
