@@ -13,7 +13,7 @@ namespace FamilyAlbumDownload
     {
         private const string ROOT_URL = "https://exiftool.org/exiftool-12.21.zip";
 
-        private readonly static string exeDirectory = "./";
+        private readonly static string exeDirectory = AppContext.BaseDirectory;
         private readonly static string programName = "exiftool.exe";
         private readonly static string programPath = Path.Combine(exeDirectory, programName);
 
@@ -26,7 +26,7 @@ namespace FamilyAlbumDownload
             string exifZipLocation = Path.Combine(exeDirectory, "exiftool-12.21.zip");
             string exifUnzipLocation = Path.Combine(exeDirectory, "exif-decom");
 
-            if (File.Exists(programName))
+            if (File.Exists(programPath))
             {
                 return;
             }
