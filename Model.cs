@@ -63,6 +63,9 @@ namespace FamilyAlbumDownload
                 case "image/jpeg":
                     extension = "jpg";
                     break;
+                case "image/png":
+                    extension = "png";
+                    break;
                 case "video/mp4":
                     extension = "mp4";
                     break;
