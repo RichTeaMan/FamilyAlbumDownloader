@@ -57,5 +57,5 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: FamilyAlbumDownloader-${{ matrix.cfg.runtime }}
-        path: bin/Release/net5.0/${{ matrix.cfg.runtime }}/publish/
+        path: bin/Release/net6.0/${{ matrix.cfg.runtime }}/publish/
 
