@@ -47,7 +47,7 @@ namespace FamilyAlbumDownload
                     downloadUrl = expiringUrl;
                     break;
                 case "movie":
-                    downloadUrl = expiringVideoUrl;
+                    downloadUrl = $"{expiringVideoUrl}/download".Replace("media_files_playlist", "media_files");
                     break;
                 default:
                     throw new Exception($"Unknown media type '{mediaType}'.");

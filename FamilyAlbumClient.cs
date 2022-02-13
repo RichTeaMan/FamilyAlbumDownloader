@@ -96,8 +96,8 @@ namespace FamilyAlbumDownload
 
                 if (!File.Exists(filename))
                 {
-
-                    using (var mediaStream = await client.GetStreamAsync(mediaFile.DownloadUrl()))
+                    var downloadUrl = mediaFile.DownloadUrl();
+                    using (var mediaStream = await client.GetStreamAsync(downloadUrl))
                     using (var fs = File.Create(filename))
                     {
                         mediaStream.CopyTo(fs);
