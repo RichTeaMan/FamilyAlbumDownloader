@@ -17,7 +17,7 @@ namespace FamilyAlbumDownload
         static async Task<int> Main(string[] args)
         {
             Console.WriteLine("Family Album Downloader");
-            Console.WriteLine($"Thomas Holmes 2021. {VersionNumber}");
+            Console.WriteLine($"Thomas Holmes 2022. {VersionNumber}");
             Console.WriteLine();
 
             var rootCommand = new RootCommand
