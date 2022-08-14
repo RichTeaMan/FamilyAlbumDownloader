@@ -179,7 +179,7 @@ namespace FamilyAlbumDownload
             var gonColourMapMatch = gonColourMapRegex.Match(cdata);
             cdata = cdata.Replace(gonColourMapMatch.Value, "");
 
-            string json = cdata.Replace("window.gon={};gon.media=", "").Replace("//]]", "").Trim();
+            string json = cdata.Replace("window.gon={};gon.media=", "").Replace("//]]", "").Replace("gon.canSaveMedia=true;", "").Trim();
 
             var model = JsonConvert.DeserializeObject<Root>(json);
             return model;
