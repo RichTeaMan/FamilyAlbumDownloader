@@ -8,7 +8,6 @@ on:
     branches:
     - '*'
 
-# runtime names from https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
 jobs:
   ci-build:
     strategy:
@@ -19,19 +18,19 @@ jobs:
           os: windows-latest
           target: windows
           runtime: win-x64
-          artifact: FamilyAlbumDownloader.exe
+          artifact: family_album_downloader.exe
 
         - name: Linux
           os: ubuntu-20.04
           target: linux
           runtime: linux-x64
-          artifact: FamilyAlbumDownloader
+          artifact: family_album_downloader
 
         - name: Mac
           os: macos-10.15
           target: mac
           runtime: osx-x64
-          artifact: FamilyAlbumDownloader
+          artifact: family_album_downloader
 
 
     name: ${{ matrix.cfg.name }} ${{ github.ref }}
@@ -40,22 +39,13 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
       with:
-        dotnet-version: 6.0.x
-    - name: Nuget Clear
-      run: dotnet nuget locals all --clear
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
-    - name: Publish
-      run: dotnet publish FamilyAlbumDownload.csproj -c Release -r ${{ matrix.cfg.runtime }} /p:PublishSingleFile=true
+        toolchain: stable
+    - run: cargo build --release --all-features
+    - run: cargo test --release --all-features
     - uses: actions/upload-artifact@v2
       with:
         name: FamilyAlbumDownloader-${{ matrix.cfg.runtime }}
-        path: bin/Release/net6.0/${{ matrix.cfg.runtime }}/publish/
-
+        path: target/release/${{ matrix.cfg.artifact }}
