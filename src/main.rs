@@ -1,9 +1,9 @@
 mod family_album_client;
 mod model;
 
+use crate::family_album_client::FamilyAlbumClient;
 use clap::Parser;
 use git_version::git_version;
-use crate::family_album_client::FamilyAlbumClient;
 
 pub const GIT_VERSION: &str = git_version!();
 
@@ -26,11 +26,18 @@ async fn main() {
     let args = Args::parse();
 
     println!("Family Album Downloader");
-    println!("Thomas Holmes 2022. {GIT_VERSION}");
+    println!("Thomas Holmes 2022. Version {GIT_VERSION}");
 
     let mut client = FamilyAlbumClient::new(&args.id_token, &args.password, &args.output_directory);
-    client.login().await.unwrap();
 
     println!("Downloading album. This may take several minutes...");
-    client.download_all_media().await;
+    loop {
+        client.login().await.unwrap();
+        if let Err(_) = client.download_all_media().await {
+            println!("Credentials have timed out. Refreshing media list.");
+        } else {
+            break;
+        }
+    }
+    println!("Complete.");
 }

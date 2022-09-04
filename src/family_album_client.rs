@@ -1,4 +1,4 @@
-﻿use std::{collections::HashMap, fs::create_dir_all, path::Path};
+use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use fancy_regex::Regex;
 use filetime::FileTime;
@@ -15,74 +15,89 @@ pub struct FamilyAlbumClient {
     auth_token: Option<String>,
     client: Client,
 }
+
+pub struct AuthError;
+
 impl FamilyAlbumClient {
     pub fn new(id_token: &str, password: &str, output_directory: &str) -> FamilyAlbumClient {
-        let mut headers = header::HeaderMap::new();
-        headers.insert(
-            header::USER_AGENT,
-            header::HeaderValue::from_static(USER_AGENT),
-        );
-
-        let client = reqwest::Client::builder()
-            .default_headers(headers)
-            .cookie_store(true)
-            .build()
-            .unwrap();
-
         let base_address = format!("https://mitene.us/f/{id_token}");
 
         FamilyAlbumClient {
             base_address: base_address,
             password: password.to_string(),
             output_directory: output_directory.to_string(),
-            client: client,
+            client: Self::build_client(),
             auth_token: None,
         }
     }
 
+    fn build_client() -> Client {
+        let mut headers = header::HeaderMap::new();
+        headers.insert(
+            header::USER_AGENT,
+            header::HeaderValue::from_static(USER_AGENT),
+        );
+
+        reqwest::Client::builder()
+            .default_headers(headers)
+            .cookie_store(true)
+            .build()
+            .unwrap()
+    }
+
+    fn rebuild_client(&mut self) {
+        self.client = Self::build_client();
+    }
+
     pub async fn login(&mut self) -> Result<(), Error> {
-        if self.auth_token == None {
-            let login_response = self
-                .client
-                .get(format!(
-                    "{base_address}/login",
-                    base_address = self.base_address
-                ))
-                .send()
-                .await?;
+        self.rebuild_client();
 
-            let login_page = login_response.text().await?;
+        let login_response = self
+            .client
+            .get(format!(
+                "{base_address}/login",
+                base_address = self.base_address
+            ))
+            .send()
+            .await?;
 
-            let auth_regex = Regex::new(r#"(?<=name="authenticity_token" value=")[^"]+"#).unwrap();
-            let auth_match = auth_regex.captures(login_page.as_str()).unwrap();
-            match auth_match {
-                Some(auth_capture) => {
-                    let auth_token = auth_capture.get(0).unwrap().as_str();
-
-                    let mut params = HashMap::new();
-                    params.insert("authenticity_token", auth_token);
-                    params.insert("session[password]", self.password.as_str());
-                    params.insert("commit", "Login");
-                    self.client
-                        .post(format!(
-                            "{base_address}/login",
-                            base_address = self.base_address
-                        ))
-                        .form(&params)
-                        .send()
-                        .await?;
-
-                    self.auth_token = Some(auth_token.to_string());
-                }
-                None => panic!("Could not get authentication token."),
-            }
-
-            return Ok(());
+        if !login_response.status().is_success() {
+            panic!(
+                "Invalid login response: {status}",
+                status = login_response.status()
+            );
         }
+
+        let login_page = login_response.text().await?;
+
+        let auth_regex = Regex::new(r#"(?<=name="authenticity_token" value=")[^"]+"#).unwrap();
+        let auth_match = auth_regex.captures(login_page.as_str()).unwrap();
+        match auth_match {
+            Some(auth_capture) => {
+                let auth_token = auth_capture.get(0).unwrap().as_str();
+
+                let mut params = HashMap::new();
+                params.insert("authenticity_token", auth_token);
+                params.insert("session[password]", self.password.as_str());
+                params.insert("commit", "Login");
+                self.client
+                    .post(format!(
+                        "{base_address}/login",
+                        base_address = self.base_address
+                    ))
+                    .form(&params)
+                    .send()
+                    .await?;
+
+                self.auth_token = Some(auth_token.to_string());
+            }
+            None => panic!("Could not get authentication token."),
+        }
+
         return Ok(());
     }
 
-    pub async fn download_all_media(&self) {
+    pub async fn download_all_media(&mut self) -> Result<(), AuthError> {
         let media_files = self.fetch_images_urls().await;
 
         let total = media_files.len();
@@ -96,10 +111,35 @@ impl FamilyAlbumClient {
             let filename = filename_string.as_str();
 
             if !Path::new(filename).exists() {
-                let download_url = media_file.download_url();
-                let file_response = self.client.get(download_url).send().await;
+                self.save_media_file(filename, &media_file).await?;
 
-                let bytes = file_response.unwrap().bytes().await.unwrap();
+                download_count = download_count + 1;
+            }
+            count = count + 1;
+            println!("Processed {c} of {total}...", c = count, total = total);
+        }
+        println!("Finished getting media. {download_count} new files.");
+
+        Ok(())
+    }
+
+    async fn save_media_file(
+        &self,
+        filename: &str,
+        media_file: &Mediafile,
+    ) -> Result<(), AuthError> {
+        let download_url = media_file.download_url();
+        let client = Self::build_client();
+        let file_response_result = client.get(download_url.clone()).send().await;
+        match file_response_result {
+            Ok(file_response) => {
+                let status = file_response.status();
+
+                if status.as_u16() == 403 {
+                    return Err(AuthError);
+                }
+
+                let bytes = file_response.bytes().await.unwrap();
                 std::fs::write(filename, bytes).unwrap();
 
                 filetime::set_file_mtime(
@@ -108,13 +148,11 @@ impl FamilyAlbumClient {
                 )
                 .unwrap();
 
-                download_count = download_count + 1;
+                Ok(())
             }
 
-            count = count + 1;
-            println!("Processed {c} of {total}...", c = count, total = total);
+            Err(e) => panic!("Error: {e}"),
         }
-        println!("Finished getting media. {download_count} new files.");
     }
 
     pub async fn fetch_images_urls(&self) -> Vec<Mediafile> {
