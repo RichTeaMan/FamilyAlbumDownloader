@@ -16,3 +16,5 @@ fancy-regex = "0.10"
 clap = { version = "3", features = ["derive"] }
 filetime = "0.2"
 git-version = "0.3"
+indicatif = "0.17.0"
+log = "0.4.17"
