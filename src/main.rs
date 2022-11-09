@@ -2,6 +2,7 @@ mod family_album_client;
 mod model;
 
 use crate::family_album_client::FamilyAlbumClient;
+use chrono::prelude::*;
 use clap::Parser;
 use git_version::git_version;
 
@@ -25,8 +26,11 @@ struct Args {
 async fn main() {
     let args = Args::parse();
 
+    let now = Utc::now();
+    let year = now.year();
+
     println!("Family Album Downloader");
-    println!("Thomas Holmes 2022. Version {GIT_VERSION}");
+    println!("Thomas Holmes 2021 - {year}. Version {GIT_VERSION}");
 
     let mut client = FamilyAlbumClient::new(&args.id_token, &args.password, &args.output_directory);
 
