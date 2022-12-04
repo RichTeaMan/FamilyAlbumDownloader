@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use fancy_regex::Regex;
 use filetime::FileTime;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
 use reqwest::{header, Client, Error};
 
@@ -109,7 +109,9 @@ impl FamilyAlbumClient {
         println!("Saving media to {dir}...", dir = self.output_directory);
         create_dir_all(self.output_directory.as_str()).unwrap();
 
+        let style = ProgressStyle::default_bar().template("{bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap();
         let progress_bar = ProgressBar::new(media_files.len() as u64);
+        progress_bar.set_style(style);
 
         for media_file in media_files {
             let filename_string = media_file.suggested_file_name(self.output_directory.as_str());
@@ -124,7 +126,7 @@ impl FamilyAlbumClient {
             progress_bar.inc(1);
             debug!("Processed {c} of {total}...", c = count, total = total);
         }
-        progress_bar.finish_with_message("Finished getting media. {download_count} new files.");
+        progress_bar.finish_with_message(format!("Finished getting media. {download_count} new files."));
 
         Ok(())
     }
