@@ -25,7 +25,7 @@ impl FamilyAlbumClient {
         let base_address = format!("https://mitene.us/f/{id_token}");
 
         FamilyAlbumClient {
-            base_address: base_address,
+            base_address,
             password: password.to_string(),
             output_directory: output_directory.to_string(),
             client: Self::build_client(),
@@ -96,7 +96,7 @@ impl FamilyAlbumClient {
             None => panic!("Could not get authentication token."),
         }
 
-        return Ok(());
+        Ok(())
     }
 
     pub async fn download_all_media(&mut self) -> Result<(), AuthError> {
@@ -122,9 +122,9 @@ impl FamilyAlbumClient {
             if !Path::new(filename).exists() {
                 self.save_media_file(filename, &media_file).await?;
 
-                download_count = download_count + 1;
+                download_count += 1;
             }
-            count = count + 1;
+            count += 1;
             progress_bar.inc(1);
             debug!("Processed {c} of {total}...", c = count, total = total);
         }
@@ -174,7 +174,7 @@ impl FamilyAlbumClient {
             let model = self.fetch_media_model(page).await.unwrap();
             media_urls.extend(model.media_files);
             has_images = model.has_next;
-            page = page + 1;
+            page += 1;
         }
 
         media_urls

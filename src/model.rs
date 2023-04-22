@@ -62,14 +62,14 @@ impl Mediafile {
         if self.media_type == "photo" {
             download_url = self.expiring_url.clone();
         } else if self.media_type == "movie" {
-            let expiring_video_url = self.expiring_video_url.clone().unwrap().clone();
+            let expiring_video_url = self.expiring_video_url.clone().unwrap();
             download_url = format!("{expiring_video_url}/download")
                 .replace("media_files_playlist", "media_files");
         } else {
             let media_type = self.media_type.clone();
             panic!("Unknown media type '{media_type}'.");
         }
-        return download_url;
+        download_url
     }
 
     pub fn suggested_file_name(&self, base_path: &str) -> String {
@@ -88,16 +88,14 @@ impl Mediafile {
         let uuid = self.uuid.to_lowercase();
         let path = Path::new(base_path).join(format!("{uuid}.{extension}"));
         let res = path.to_str();
-        let result: String;
         match res {
             Some(s) => {
-                result = s.to_string();
+                s.to_string()
             }
             None => {
-                result = "".to_string();
+                "".to_string()
             }
         }
-        return result;
     }
 }
 

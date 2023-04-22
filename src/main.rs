@@ -37,7 +37,7 @@ async fn main() {
     println!("Downloading album. This may take several minutes...");
     loop {
         client.login().await.unwrap();
-        if let Err(_) = client.download_all_media().await {
+        if (client.download_all_media().await).is_err() {
             println!("Credentials have timed out. Refreshing media list.");
         } else {
             break;
