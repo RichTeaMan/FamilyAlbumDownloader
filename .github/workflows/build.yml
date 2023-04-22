@@ -21,13 +21,13 @@ jobs:
           artifact: family_album_downloader.exe
 
         - name: Linux
-          os: ubuntu-20.04
+          os: ubuntu-latest
           target: linux
           runtime: linux-x64
           artifact: family_album_downloader
 
         - name: Mac
-          os: macos-10.15
+          os: macos-latest
           target: mac
           runtime: osx-x64
           artifact: family_album_downloader
