@@ -109,7 +109,9 @@ impl FamilyAlbumClient {
         println!("Saving media to {dir}...", dir = self.output_directory);
         create_dir_all(self.output_directory.as_str()).unwrap();
 
-        let style = ProgressStyle::default_bar().template("{bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap();
+        let style = ProgressStyle::default_bar()
+            .template("{bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+            .unwrap();
         let progress_bar = ProgressBar::new(media_files.len() as u64);
         progress_bar.set_style(style);
 
@@ -126,7 +128,9 @@ impl FamilyAlbumClient {
             progress_bar.inc(1);
             debug!("Processed {c} of {total}...", c = count, total = total);
         }
-        progress_bar.finish_with_message(format!("Finished getting media. {download_count} new files."));
+        progress_bar.finish_with_message(format!(
+            "Finished getting media. {download_count} new files."
+        ));
 
         Ok(())
     }
@@ -137,12 +141,11 @@ impl FamilyAlbumClient {
         media_file: &Mediafile,
     ) -> Result<(), AuthError> {
         let download_url = media_file.download_url();
-        let client = Self::build_client();
-        let file_response_result = client.get(download_url.clone()).send().await;
+        let client = &self.client;
+        let file_response_result = client.get(download_url).send().await;
         match file_response_result {
             Ok(file_response) => {
                 let status = file_response.status();
-
                 if status.as_u16() == 403 {
                     return Err(AuthError);
                 }
