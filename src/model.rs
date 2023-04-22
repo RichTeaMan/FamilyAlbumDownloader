@@ -124,7 +124,7 @@ pub struct User {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone, Utc};
+    use chrono::{TimeZone};
 
     use super::Mediafile;
 
@@ -162,7 +162,7 @@ mod tests {
 
         assert!(json_result.media_device_model.is_none());
         assert!(json_result.device_file_path.is_none());
-        let date_time = Utc.ymd(2022, 5, 1).and_hms(0, 0, 0);
+        let date_time = chrono::Utc.with_ymd_and_hms(2022, 5, 1, 0, 0, 0).unwrap();
         assert_eq!(date_time, json_result.took_at);
     }
 }
