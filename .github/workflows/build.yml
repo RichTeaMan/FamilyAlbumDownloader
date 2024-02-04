@@ -44,7 +44,7 @@ jobs:
         toolchain: stable
     - run: cargo build --release --all-features
     - run: cargo test --release --all-features
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: FamilyAlbumDownloader-${{ matrix.cfg.runtime }}
         path: target/release/${{ matrix.cfg.artifact }}
