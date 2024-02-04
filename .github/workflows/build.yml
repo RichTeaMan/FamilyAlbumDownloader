@@ -36,10 +36,9 @@ jobs:
     name: ${{ matrix.cfg.name }} ${{ github.ref }}
     runs-on: ${{ matrix.cfg.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: actions/checkout@v3
     - uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
