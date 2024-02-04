@@ -57,6 +57,10 @@ pub struct Mediafile {
 }
 
 impl Mediafile {
+    pub fn is_video(&self) -> bool {
+        self.content_type == "video/mp4"
+    }
+
     pub fn download_url(&self) -> String {
         let download_url;
         if self.media_type == "photo" {
@@ -122,7 +126,7 @@ pub struct User {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone};
+    use chrono::TimeZone;
 
     use super::Mediafile;
 

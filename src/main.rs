@@ -43,5 +43,9 @@ async fn main() {
             break;
         }
     }
+    if (client.compress_videos().await).is_err(){
+        println!("Error compressing videos.");
+
+    }
     println!("Complete.");
 }

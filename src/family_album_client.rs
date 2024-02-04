@@ -1,6 +1,11 @@
-use std::{collections::HashMap, fs::create_dir_all, path::Path};
+use std::{
+    collections::HashMap,
+    fs::{self, create_dir_all},
+    path::Path,
+};
 
 use fancy_regex::Regex;
+use ffmpeg_sidecar::{command::FfmpegCommand, event::FfmpegEvent};
 use filetime::FileTime;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
@@ -116,13 +121,20 @@ impl FamilyAlbumClient {
         progress_bar.set_style(style);
 
         for media_file in media_files {
-            let filename_string = media_file.suggested_file_name(self.output_directory.as_str());
-            let filename = filename_string.as_str();
+            let mut filename_string =
+                media_file.suggested_file_name(self.output_directory.as_str());
+            let mut filename = filename_string.as_str();
 
             if !Path::new(filename).exists() {
-                self.save_media_file(filename, &media_file).await?;
+                if media_file.is_video() {
+                    filename_string = format!("{filename}.uncompressed");
+                    filename = filename_string.as_str();
+                }
+                if !Path::new(filename).exists() {
+                    self.save_media_file(filename, &media_file).await?;
 
-                download_count += 1;
+                    download_count += 1;
+                }
             }
             count += 1;
             progress_bar.inc(1);
@@ -131,6 +143,79 @@ impl FamilyAlbumClient {
         progress_bar.finish_with_message(format!(
             "Finished getting media. {download_count} new files."
         ));
+
+        Ok(())
+    }
+
+    pub async fn compress_videos(&mut self) -> ffmpeg_sidecar::error::Result<()> {
+        ffmpeg_sidecar::download::auto_download().unwrap();
+
+        let mut compress_count = 0;
+        println!("Compressing videos...");
+
+        let mut compressed_files = Vec::new();
+        let paths = fs::read_dir(self.output_directory.as_str()).unwrap();
+        for path in paths {
+            let os_path = path.unwrap().file_name();
+            let path_str = os_path.to_str().unwrap().to_string();
+            if path_str.ends_with(".uncompressed") {
+                compressed_files.push(path_str);
+            }
+        }
+
+        if compressed_files.is_empty() {
+            println!("No files to compress.");
+            return Ok(());
+        }
+
+        let style = ProgressStyle::default_bar()
+            .template("{bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+            .unwrap();
+        let progress_bar = ProgressBar::new(compressed_files.len() as u64);
+        progress_bar.set_style(style);
+
+        for compressed_file in compressed_files {
+            let destination_file = compressed_file.replace(".uncompressed", "");
+
+            let full_compressed =
+                format!("{p}/{n}", p = self.output_directory, n = compressed_file);
+            let full_destination =
+                format!("{p}/{n}", p = self.output_directory, n = destination_file);
+
+            FfmpegCommand::new()
+                .arg("-i")
+                .arg(&full_compressed)
+                .arg("-movflags")
+                .arg("use_metadata_tags")
+                .arg("-vcodec")
+                .arg("libx264")
+                .arg("-crf")
+                .arg("28")
+                .arg("-y")
+                .arg(&full_destination)
+                .spawn()?
+                // iter seemingly necessary for invocation to finish
+                .iter()?
+                .for_each(|event: FfmpegEvent| {
+                    match event {
+                        //FfmpegEvent::Log(_level, msg) => {
+                        //    eprintln!("[ffmpeg] {}", msg); // <- granular log message from stderr
+                        //}
+                        _ => {}
+                    }
+                });
+            if Path::new(&full_destination).exists() {
+                match fs::remove_file(&full_compressed) {
+                    Ok(_) => {}
+                    Err(e) => eprint!("Unable to delete {full_compressed}, {e:?}"),
+                }
+            }
+            compress_count += 1;
+            progress_bar.inc(1);
+        }
+
+        progress_bar
+            .finish_with_message(format!("Finished compressing. {compress_count} new files."));
 
         Ok(())
     }
