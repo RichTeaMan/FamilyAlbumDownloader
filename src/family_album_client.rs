@@ -4,6 +4,7 @@ use std::{
     path::Path,
 };
 
+use chrono::{DateTime, Utc};
 use fancy_regex::Regex;
 use ffmpeg_sidecar::{command::FfmpegCommand, event::FfmpegEvent};
 use filetime::FileTime;
@@ -153,17 +154,17 @@ impl FamilyAlbumClient {
         let mut compress_count = 0;
         println!("Compressing videos...");
 
-        let mut compressed_files = Vec::new();
+        let mut uncompressed_files = Vec::new();
         let paths = fs::read_dir(self.output_directory.as_str()).unwrap();
         for path in paths {
             let os_path = path.unwrap().file_name();
             let path_str = os_path.to_str().unwrap().to_string();
             if path_str.ends_with(".uncompressed") {
-                compressed_files.push(path_str);
+                uncompressed_files.push(path_str);
             }
         }
 
-        if compressed_files.is_empty() {
+        if uncompressed_files.is_empty() {
             println!("No files to compress.");
             return Ok(());
         }
@@ -171,20 +172,20 @@ impl FamilyAlbumClient {
         let style = ProgressStyle::default_bar()
             .template("{bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
             .unwrap();
-        let progress_bar = ProgressBar::new(compressed_files.len() as u64);
+        let progress_bar = ProgressBar::new(uncompressed_files.len() as u64);
         progress_bar.set_style(style);
 
-        for compressed_file in compressed_files {
-            let destination_file = compressed_file.replace(".uncompressed", "");
+        for uncompressed_file in uncompressed_files {
+            let destination_file = uncompressed_file.replace(".uncompressed", "");
 
-            let full_compressed =
-                format!("{p}/{n}", p = self.output_directory, n = compressed_file);
+            let full_uncompressed =
+                format!("{p}/{n}", p = self.output_directory, n = uncompressed_file);
             let full_destination =
                 format!("{p}/{n}", p = self.output_directory, n = destination_file);
 
             FfmpegCommand::new()
                 .arg("-i")
-                .arg(&full_compressed)
+                .arg(&full_uncompressed)
                 .arg("-movflags")
                 .arg("use_metadata_tags")
                 .arg("-vcodec")
@@ -205,9 +206,13 @@ impl FamilyAlbumClient {
                     }
                 });
             if Path::new(&full_destination).exists() {
-                match fs::remove_file(&full_compressed) {
+                let uncompressed_file_metadata = fs::metadata(&full_uncompressed).unwrap();
+                let mtime = FileTime::from_last_modification_time(&uncompressed_file_metadata);
+                filetime::set_file_mtime(&full_destination, mtime).unwrap();
+
+                match fs::remove_file(&full_uncompressed) {
                     Ok(_) => {}
-                    Err(e) => eprint!("Unable to delete {full_compressed}, {e:?}"),
+                    Err(e) => eprint!("Unable to delete {full_uncompressed}, {e:?}"),
                 }
             }
             compress_count += 1;
