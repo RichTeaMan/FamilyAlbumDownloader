@@ -18,19 +18,19 @@ jobs:
           os: windows-latest
           target: windows
           runtime: win-x64
-          artifact: family_album_downloader.exe
+          artifact: FamilyAlbumDownloader.exe
 
         - name: Linux
           os: ubuntu-latest
           target: linux
           runtime: linux-x64
-          artifact: family_album_downloader
+          artifact: FamilyAlbumDownloader
 
         - name: Mac
           os: macos-latest
           target: mac
           runtime: osx-x64
-          artifact: family_album_downloader
+          artifact: FamilyAlbumDownloader
 
 
     name: ${{ matrix.cfg.name }} ${{ github.ref }}
