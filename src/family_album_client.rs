@@ -148,8 +148,8 @@ impl FamilyAlbumClient {
         Ok(())
     }
 
-    pub async fn compress_videos(&mut self) -> ffmpeg_sidecar::error::Result<()> {
-        ffmpeg_sidecar::download::auto_download().unwrap();
+    pub async fn compress_videos(&mut self) -> anyhow::Result<()> {
+        ffmpeg_sidecar::download::auto_download()?;
 
         let mut compress_count = 0;
         println!("Compressing videos...");
