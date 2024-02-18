@@ -4,7 +4,6 @@ use std::{
     path::Path,
 };
 
-use chrono::{DateTime, Utc};
 use fancy_regex::Regex;
 use ffmpeg_sidecar::{command::FfmpegCommand, event::FfmpegEvent};
 use filetime::FileTime;
