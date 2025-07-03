@@ -1,11 +1,11 @@
-use std::{
+﻿use std::{
     collections::HashMap,
     fs::{self, create_dir_all},
     path::Path,
 };
 
 use fancy_regex::Regex;
-use ffmpeg_sidecar::{command::FfmpegCommand, event::FfmpegEvent};
+use ffmpeg_sidecar::command::FfmpegCommand;
 use filetime::FileTime;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
@@ -196,14 +196,15 @@ impl FamilyAlbumClient {
                 .spawn()?
                 // iter seemingly necessary for invocation to finish
                 .iter()?
-                .for_each(|event: FfmpegEvent| {
-                    match event {
-                        //FfmpegEvent::Log(_level, msg) => {
-                        //    eprintln!("[ffmpeg] {}", msg); // <- granular log message from stderr
-                        //}
-                        _ => {}
-                    }
-                });
+                //.for_each(|event: FfmpegEvent| {
+                //    match event {
+                //        FfmpegEvent::Log(_level, msg) => {
+                //            eprintln!("[ffmpeg] {}", msg); // <- granular log message from stderr
+                //        }
+                //        _ => {}
+                //    }
+                //})
+                ;
             if Path::new(&full_destination).exists() {
                 let uncompressed_file_metadata = fs::metadata(&full_uncompressed).unwrap();
                 let mtime = FileTime::from_last_modification_time(&uncompressed_file_metadata);
@@ -284,8 +285,6 @@ impl FamilyAlbumClient {
         let main_page = main_response.text().await?;
 
         let cdata_regex = Regex::new("(?<=CDATA\\[)[^>]+").unwrap();
-        let gon_id_regex = Regex::new(";gon.selfUserId=\"\\d+\";").unwrap();
-        let gon_colour_map_regex = Regex::new(";gon.familyUserIdToColorMap={[^}]+}").unwrap();
 
         let cdata = cdata_regex
             .find_from_pos(main_page.as_str(), 0)
@@ -293,28 +292,43 @@ impl FamilyAlbumClient {
             .unwrap()
             .as_str();
 
-        let gon_match = gon_id_regex
-            .find_from_pos(cdata, 0)
-            .unwrap()
-            .unwrap()
-            .as_str();
+        let media_start_token = "gon.media=";
+        let media_start_opt = cdata.find(media_start_token);
+        if media_start_opt.is_none() {
+            panic!("Could not find {}", media_start_token);
+        }
 
-        let gon_colour_map_match = gon_colour_map_regex
-            .find_from_pos(cdata, 0)
-            .unwrap()
-            .unwrap()
-            .as_str();
+        let start_media_position = media_start_opt.unwrap() + media_start_token.len();
+        let mut end_media_position = 0;
+        let mut open_braces = 0;
+        let mut json_vec = Vec::new();
+        for (i, c) in cdata.chars().enumerate().skip(start_media_position) {
+            // rebuild json one char at a time. tried using offsets, but variable length unicode characters complicated things.
+            json_vec.push(c);
+            if c == '{' || c == '[' {
+                open_braces += 1;
+            } else if c == '}' || c == ']' {
+                open_braces -= 1;
+                if open_braces == 0 {
+                    end_media_position = i;
+                    break;
+                }
+            }
+        }
 
-        let json = cdata
-            .replace(gon_match, "")
-            .replace(gon_colour_map_match, "")
-            .replace("window.gon={};gon.media=", "")
-            .replace("//]]", "")
-            .replace("gon.canSaveMedia=true;", "")
-            .trim()
-            .to_string();
+        if end_media_position == 0 {
+            panic!("Failed finding end of media.");
+        }
+        let vstr: String = json_vec.into_iter().collect();
 
-        let json_result = serde_json::from_str::<Root>(json.as_str()).unwrap();
-        Ok(json_result)
+        let json_result = serde_json::from_str::<Root>(vstr.as_str());
+        if let Err(json_err) = json_result {
+            eprintln!("An error occurred deserialising JSON.");
+            eprintln!("CDATA found:\n{}", cdata);
+            eprintln!("JSON found:\n{}", vstr);
+            eprintln!("{:?}", json_err);
+            panic!();
+        }
+        Ok(json_result.unwrap())
     }
 }
