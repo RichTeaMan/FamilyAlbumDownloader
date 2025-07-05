@@ -106,8 +106,8 @@ impl FamilyAlbumClient {
         if let Ok(response) = response_result {
             if !response.status().is_success() {
                 let status_code: String = response.status().to_string();
-                eprintln!("Auth token: {}", auth_token);
-                panic!("Error while authenticating, received {}", status_code);
+                eprintln!("Auth token: {auth_token}");
+                panic!("Error while authenticating, received {status_code}");
             }
         }
         else {
@@ -153,7 +153,7 @@ impl FamilyAlbumClient {
             }
             count += 1;
             progress_bar.inc(1);
-            debug!("Processed {c} of {total}...", c = count, total = total);
+            debug!("Processed {count} of {total}...");
         }
         progress_bar.finish_with_message(format!(
             "Finished getting media. {download_count} new files."
@@ -302,7 +302,7 @@ impl FamilyAlbumClient {
         let media_start_token = "gon.media=";
         let media_start_opt = main_page.find(media_start_token);
         if media_start_opt.is_none() {
-            panic!("Could not find {}", media_start_token);
+            panic!("Could not find {media_start_token}");
         }
 
         let start_media_position = media_start_opt.unwrap() + media_start_token.len();
@@ -331,9 +331,9 @@ impl FamilyAlbumClient {
         let json_result = serde_json::from_str::<Root>(vstr.as_str());
         if let Err(json_err) = json_result {
             eprintln!("An error occurred deserialising JSON.");
-            eprintln!("Page found:\n{}", main_page);
-            eprintln!("JSON found:\n{}", vstr);
-            eprintln!("{:?}", json_err);
+            eprintln!("Page found:\n{main_page}");
+            eprintln!("JSON found:\n{vstr}");
+            eprintln!("{json_err:?}");
             panic!();
         }
         Ok(json_result.unwrap())
