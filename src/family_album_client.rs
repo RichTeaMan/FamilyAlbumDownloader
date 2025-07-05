@@ -4,12 +4,11 @@
     path::Path,
 };
 
-use fancy_regex::Regex;
 use ffmpeg_sidecar::command::FfmpegCommand;
 use filetime::FileTime;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
-use reqwest::{header, Client, Error};
+use reqwest::{Client, Error, header};
 
 use crate::model::{Mediafile, Root};
 
@@ -77,29 +76,45 @@ impl FamilyAlbumClient {
 
         let login_page = login_response.text().await?;
 
-        let auth_regex = Regex::new(r#"(?<=name="authenticity_token" value=")[^"]+"#).unwrap();
-        let auth_match = auth_regex.captures(login_page.as_str()).unwrap();
-        match auth_match {
-            Some(auth_capture) => {
-                let auth_token = auth_capture.get(0).unwrap().as_str();
+        let auth_token_pattern = r#"name="authenticity_token" value=""#;
+        let auth_token_start =
+            login_page.as_str().find(auth_token_pattern).unwrap() + auth_token_pattern.len();
+        let mut auth_token_vec = Vec::new();
 
-                let mut params = HashMap::new();
-                params.insert("authenticity_token", auth_token);
-                params.insert("session[password]", self.password.as_str());
-                params.insert("commit", "Login");
-                self.client
-                    .post(format!(
-                        "{base_address}/login",
-                        base_address = self.base_address
-                    ))
-                    .form(&params)
-                    .send()
-                    .await?;
-
-                self.auth_token = Some(auth_token.to_string());
+        for (_, c) in login_page.chars().enumerate().skip(auth_token_start) {
+            if c == '"' {
+                break;
             }
-            None => panic!("Could not get authentication token."),
+            auth_token_vec.push(c);
         }
+        let auth_token: String = auth_token_vec.into_iter().collect();
+
+        let mut params = HashMap::new();
+        params.insert("authenticity_token", auth_token.as_str());
+        params.insert("session[password]", self.password.as_str());
+        params.insert("commit", "Login");
+        let response_result = self
+            .client
+            .post(format!(
+                "{base_address}/login",
+                base_address = self.base_address
+            ))
+            .form(&params)
+            .send()
+            .await;
+
+        if let Ok(response) = response_result {
+            if !response.status().is_success() {
+                let status_code: String = response.status().to_string();
+                eprintln!("Auth token: {}", auth_token);
+                panic!("Error while authenticating, received {}", status_code);
+            }
+        }
+        else {
+            panic!("Failed to get response from authentication endpoint. {}", response_result.err().unwrap());
+        }
+
+        self.auth_token = Some(auth_token.to_string());
 
         Ok(())
     }
@@ -284,16 +299,8 @@ impl FamilyAlbumClient {
 
         let main_page = main_response.text().await?;
 
-        let cdata_regex = Regex::new("(?<=CDATA\\[)[^>]+").unwrap();
-
-        let cdata = cdata_regex
-            .find_from_pos(main_page.as_str(), 0)
-            .unwrap()
-            .unwrap()
-            .as_str();
-
         let media_start_token = "gon.media=";
-        let media_start_opt = cdata.find(media_start_token);
+        let media_start_opt = main_page.find(media_start_token);
         if media_start_opt.is_none() {
             panic!("Could not find {}", media_start_token);
         }
@@ -302,7 +309,7 @@ impl FamilyAlbumClient {
         let mut end_media_position = 0;
         let mut open_braces = 0;
         let mut json_vec = Vec::new();
-        for (i, c) in cdata.chars().enumerate().skip(start_media_position) {
+        for (i, c) in main_page.chars().enumerate().skip(start_media_position) {
             // rebuild json one char at a time. tried using offsets, but variable length unicode characters complicated things.
             json_vec.push(c);
             if c == '{' || c == '[' {
@@ -324,7 +331,7 @@ impl FamilyAlbumClient {
         let json_result = serde_json::from_str::<Root>(vstr.as_str());
         if let Err(json_err) = json_result {
             eprintln!("An error occurred deserialising JSON.");
-            eprintln!("CDATA found:\n{}", cdata);
+            eprintln!("Page found:\n{}", main_page);
             eprintln!("JSON found:\n{}", vstr);
             eprintln!("{:?}", json_err);
             panic!();
