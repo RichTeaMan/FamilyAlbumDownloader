@@ -58,18 +58,13 @@ impl FamilyAlbumClient {
     pub async fn login(&mut self) -> Result<(), Error> {
         self.rebuild_client();
 
-        let login_response = self
-            .client
-            .get(format!(
-                "{base_address}/login",
-                base_address = self.base_address
-            ))
-            .send()
-            .await?;
+        let login_addr = format!("{base_address}/login", base_address = self.base_address);
+
+        let login_response = self.client.get(&login_addr).send().await?;
 
         if !login_response.status().is_success() {
             panic!(
-                "Invalid login response: {status}",
+                "Invalid login response from [{login_addr}]: {status}",
                 status = login_response.status()
             );
         }
@@ -109,9 +104,11 @@ impl FamilyAlbumClient {
                 eprintln!("Auth token: {auth_token}");
                 panic!("Error while authenticating, received {status_code}");
             }
-        }
-        else {
-            panic!("Failed to get response from authentication endpoint. {}", response_result.err().unwrap());
+        } else {
+            panic!(
+                "Failed to get response from authentication endpoint. {}",
+                response_result.err().unwrap()
+            );
         }
 
         self.auth_token = Some(auth_token.to_string());

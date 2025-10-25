@@ -93,12 +93,8 @@ impl Mediafile {
         let path = Path::new(base_path).join(format!("{uuid}.{extension}"));
         let res = path.to_str();
         match res {
-            Some(s) => {
-                s.to_string()
-            }
-            None => {
-                "".to_string()
-            }
+            Some(s) => s.to_string(),
+            None => "".to_string(),
         }
     }
 }
